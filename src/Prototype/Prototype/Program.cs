@@ -9,8 +9,6 @@ namespace Prototype
 {
     class Program
     {
-        private static InstructionCall _instructionCall;
-
         static void Main(string[] args)
         {
             List<InstructionCall> instructionsToInspect = new List<InstructionCall>();
@@ -30,12 +28,18 @@ namespace Prototype
                             
                             Console.WriteLine("\t\tProcessing... " + instruction.OpCode.Name + " " + instruction.OpCode);
                             MemberReference operand = instruction.Operand as MemberReference;
-                            _instructionCall = new InstructionCall();
-                            _instructionCall.Assembly = operand.DeclaringType.Scope.Name + ".dll";
-                            _instructionCall.Namespace = operand.DeclaringType.Namespace;
-                            _instructionCall.Class = operand.DeclaringType.Name;
-                            _instructionCall.Method = operand.Name;
-                            instructionsToInspect.Add(_instructionCall);
+                            InstructionCall instructionCall = GetCall(operand);
+                            InstructionCall single = instructionsToInspect.SingleOrDefault(x => x.Equals(instructionCall));
+
+                            if (single == null)
+                            {
+                                instructionsToInspect.Add(instructionCall);
+                                instructionCall.UsedInTests.Add(method.Name);
+                            }
+                            else
+                            {
+                                single.UsedInTests.Add(method.Name);
+                            }
                         }
                     }
                 }
@@ -57,11 +61,26 @@ namespace Prototype
                     foreach (var instructionCall in instructionCalls)
                     {
                         Console.WriteLine("\tCalled method: " + method.Name + " " + instructionCall.Method);
+                        Console.WriteLine("\tUsed in the following tests:");
+                        foreach (var usedInTest in instructionCall.UsedInTests)
+                        {
+                            Console.WriteLine("\t\t" + usedInTest);
+                        }
                     }
                 }
             }
 
             Console.ReadLine();
+        }
+
+        private static InstructionCall GetCall(MemberReference operand)
+        {
+            var instructionCall = new InstructionCall();
+            instructionCall.Assembly = operand.DeclaringType.Scope.Name + ".dll";
+            instructionCall.Namespace = operand.DeclaringType.Namespace;
+            instructionCall.Class = operand.DeclaringType.Name;
+            instructionCall.Method = operand.Name;
+            return instructionCall;
         }
     }
 
@@ -71,5 +90,11 @@ namespace Prototype
         public string Namespace { get; set; }
         public string Class { get; set; }
         public string Method { get; set; }
+        public List<string> UsedInTests { get; set; }
+
+        public InstructionCall()
+        {
+            UsedInTests = new List<string>();
+        }
     }
 }
