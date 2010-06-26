@@ -46,7 +46,11 @@ namespace Watcher
                 var originalContent = originalContents.Contents[index];
 
                 if (updatedContent != originalContent)
-                    list.Add(GetNamespaceClassMethodOfChangedLine(index, updatedContents));
+                {
+                    var changedContents = GetNamespaceClassMethodOfChangedLine(index, updatedContents);
+                    if (changedContents != null)
+                        list.Add(changedContents);
+                }
             }
 
             return list;
@@ -85,7 +89,10 @@ namespace Watcher
             method.ClassName = FindPart(updatedContents, index, IsLineClassDefinition);
             method.NamespaceName = FindPart(updatedContents, index, IsLineNamespaceDefinition);
 
-            return method;
+            if(method.FoundAllParts())
+                return method;
+
+            return null;
         }
 
         private string FindPart(string[] updatedContents, int lineOfChange, Func<string, bool> lineMatcher)
@@ -134,5 +141,10 @@ namespace Watcher
         public string ClassName { get; set; }
 
         public string NamespaceName { get; set; }
+
+        public bool FoundAllParts()
+        {
+            return !(string.IsNullOrEmpty(MethodName) || string.IsNullOrEmpty(ClassName) || string.IsNullOrEmpty(NamespaceName));
+        }
     }
 }
