@@ -20,7 +20,7 @@ namespace Watcher
             List<FileContents> contents = new List<FileContents>();
             foreach (var file in Directory.GetFiles(path, searchPattern, SearchOption.AllDirectories))
             {
-                contents.Add(new FileContents { Path = file, Contents = GetFileContents(file) });
+                contents.Add(new FileContents { Path = file, Contents = ReadFileContents(file) });
             }
 
             return contents;
@@ -44,6 +44,7 @@ namespace Watcher
             {
                 if (updatedContents.Length == index)
                     break;
+
                 var updatedContent = updatedContents[index];
                 var originalContent = originalContents.Contents[index];
 
@@ -58,7 +59,37 @@ namespace Watcher
             if (updatedContents.Length > originalContents.Contents.Length)
                 list.AddRange(FindNewMethods(updatedContents, originalContents.Contents.Length));
 
+            if (originalContents.Contents.Length > updatedContents.Length)
+                FindDeletedMethods(updatedContents, originalContents.Contents).ForEach(Console.WriteLine);
+
             return list;
+        }
+
+        private List<string> FindDeletedMethods(string[] updatedContents, string[] originalContents)
+        {
+            List<string> originalMethods = new List<string>();
+            for (int i = 0; i < originalContents.Length; i++)
+            {
+                string originalLine = originalContents[i].Trim();
+
+                if (IsLineMethodDefinition(originalLine))
+                    originalMethods.Add(GetDefinitionPart(originalLine));
+            }
+
+            for (int i = 0; i < updatedContents.Length; i++)
+            {
+                string updatedLine = updatedContents[i].Trim();
+
+                if (IsLineMethodDefinition(updatedLine))
+                {
+                    string definitionPart = GetDefinitionPart(updatedLine);
+
+                    if (originalMethods.Contains(definitionPart))
+                        originalMethods.Remove(definitionPart);
+                }
+            }
+
+            return originalMethods;
         }
 
         private IEnumerable<ChangedMethod> FindNewMethods(string[] updatedContents, int startOfNewContent)
@@ -85,11 +116,11 @@ namespace Watcher
 
         private string[] GetUpdatedContents(FileSystemEventArgs e)
         {
-            string[] updatedContents = GetFileContents(e.FullPath);
+            string[] updatedContents = ReadFileContents(e.FullPath);
             return updatedContents;
         }
 
-        private string[] GetFileContents(string path)
+        private string[] ReadFileContents(string path)
         {
             try
             {
@@ -100,7 +131,7 @@ namespace Watcher
             }
             catch (Exception)
             {
-                return GetFileContents(path);
+                return ReadFileContents(path);
             }
         }
 
@@ -117,22 +148,27 @@ namespace Watcher
             return null;
         }
 
-        private string FindPart(string[] updatedContents, int lineOfChange, Func<string, bool> lineMatcher)
+        private string FindPart(string[] contents, int lineOfChange, Func<string, bool> lineMatcher)
         {
             if (lineOfChange == 0)
                 return String.Empty;
 
-            string currentLine = updatedContents[lineOfChange].Trim();
+            string currentLine = contents[lineOfChange].Trim();
             if (lineMatcher(currentLine))
+                return GetDefinitionPart(currentLine);
+
+            return FindPart(contents, lineOfChange - 1, lineMatcher);
+        }
+
+        private string GetDefinitionPart(string currentLine)
+        {
+            foreach (var s in currentLine.Split('('))
             {
-                foreach (var s in currentLine.Split('('))
-                {
-                    string[] definition = s.Split(' ');
-                    return definition.Last();
-                }
+                string[] definition = s.Split(' ');
+                return definition.Last();
             }
-            
-            return FindPart(updatedContents, lineOfChange - 1, lineMatcher);
+
+            return string.Empty;
         }
 
         private bool IsLineNamespaceDefinition(string currentLine)
@@ -147,7 +183,8 @@ namespace Watcher
 
         private bool IsLineMethodDefinition(string currentLine)
         {
-            return currentLine.StartsWith("public ") || currentLine.StartsWith("private ") || currentLine.StartsWith("protected ") || currentLine.StartsWith("internal ");
+            return (currentLine.StartsWith("public ") || currentLine.StartsWith("private ") || currentLine.StartsWith("protected ") || currentLine.StartsWith("internal "))
+                    && !IsLineClassDefinition(currentLine);
         }
     }
 
