@@ -17,16 +17,17 @@ namespace Watcher
 
         static void fileChanged(object sender, FileSystemEventArgs e)
         {
-            string namespaceClassMethod = string.Empty;
-
+            IEnumerable<ChangedMethod> changedMethods = null;
+            
             DisableEventsDuringExecution(() =>
                                              {
-                                                 IEnumerable<ChangedMethod> changedMethods = parser.GetChangedMethods(e);
-                                                 if (changedMethods.Any())
-                                                     namespaceClassMethod = changedMethods.First().ToString();
+                                                 changedMethods = parser.GetChangedMethods(e);
                                              });
 
-            Console.WriteLine(namespaceClassMethod);
+            foreach (var changedMethod in changedMethods)
+            {
+                Console.WriteLine(changedMethod);
+            }
         }
 
         private static void DisableEventsDuringExecution(Action action)

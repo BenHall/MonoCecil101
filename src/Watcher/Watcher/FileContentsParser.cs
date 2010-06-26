@@ -40,8 +40,10 @@ namespace Watcher
         private IEnumerable<ChangedMethod> FindChangedLines(string[] updatedContents, FileContents originalContents)
         {
             List<ChangedMethod> list = new List<ChangedMethod>();
-            for (int index = 0; index < updatedContents.Length; index++)
+            for (int index = 0; index < originalContents.Contents.Length; index++)
             {
+                if (updatedContents.Length == index)
+                    break;
                 var updatedContent = updatedContents[index];
                 var originalContent = originalContents.Contents[index];
 
@@ -50,6 +52,26 @@ namespace Watcher
                     var changedContents = GetNamespaceClassMethodOfChangedLine(index, updatedContents);
                     if (changedContents != null)
                         list.Add(changedContents);
+                }
+            }
+
+            if (updatedContents.Length > originalContents.Contents.Length)
+                list.AddRange(FindNewMethods(updatedContents, originalContents.Contents.Length));
+
+            return list;
+        }
+
+        private IEnumerable<ChangedMethod> FindNewMethods(string[] updatedContents, int startOfNewContent)
+        {
+            int newLines = updatedContents.Length - startOfNewContent;
+            List<ChangedMethod> list = new List<ChangedMethod>();
+
+            for (int i = 0; i < newLines; i++)
+            {
+                var changedContents = GetNamespaceClassMethodOfChangedLine(i, updatedContents);
+                if (changedContents != null)
+                {
+                    list.Add(changedContents);
                 }
             }
 
