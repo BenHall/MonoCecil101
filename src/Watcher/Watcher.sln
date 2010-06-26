@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Watcher", "Watcher\Watcher.csproj", "{83D7AD11-B156-4DF2-B08D-9DD50531DD79}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prototype", "..\Prototype\Prototype\Prototype.csproj", "{EC4CE29C-2245-4358-9BD2-1A795F94A1DF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -13,6 +15,10 @@ Global
 		{83D7AD11-B156-4DF2-B08D-9DD50531DD79}.Debug|x86.Build.0 = Debug|x86
 		{83D7AD11-B156-4DF2-B08D-9DD50531DD79}.Release|x86.ActiveCfg = Release|x86
 		{83D7AD11-B156-4DF2-B08D-9DD50531DD79}.Release|x86.Build.0 = Release|x86
+		{EC4CE29C-2245-4358-9BD2-1A795F94A1DF}.Debug|x86.ActiveCfg = Debug|x86
+		{EC4CE29C-2245-4358-9BD2-1A795F94A1DF}.Debug|x86.Build.0 = Debug|x86
+		{EC4CE29C-2245-4358-9BD2-1A795F94A1DF}.Release|x86.ActiveCfg = Release|x86
+		{EC4CE29C-2245-4358-9BD2-1A795F94A1DF}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
