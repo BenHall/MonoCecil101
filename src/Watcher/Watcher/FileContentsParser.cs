@@ -60,20 +60,23 @@ namespace Watcher
                 list.AddRange(FindNewMethods(updatedContents, originalContents.Contents.Length));
 
             if (originalContents.Contents.Length > updatedContents.Length)
+            {
+                Console.WriteLine("Removed:");
                 FindDeletedMethods(updatedContents, originalContents.Contents).ForEach(Console.WriteLine);
+            }
 
             return list;
         }
 
-        private List<string> FindDeletedMethods(string[] updatedContents, string[] originalContents)
+        private List<ChangedMethod> FindDeletedMethods(string[] updatedContents, string[] originalContents)
         {
-            List<string> originalMethods = new List<string>();
+            List<ChangedMethod> originalMethods = new List<ChangedMethod>();
             for (int i = 0; i < originalContents.Length; i++)
             {
                 string originalLine = originalContents[i].Trim();
 
                 if (IsLineMethodDefinition(originalLine))
-                    originalMethods.Add(GetDefinitionPart(originalLine));
+                    originalMethods.Add(GetNamespaceClassMethodOfChangedLine(i, originalContents));
             }
 
             for (int i = 0; i < updatedContents.Length; i++)
@@ -82,7 +85,7 @@ namespace Watcher
 
                 if (IsLineMethodDefinition(updatedLine))
                 {
-                    string definitionPart = GetDefinitionPart(updatedLine);
+                    var definitionPart = GetNamespaceClassMethodOfChangedLine(i, updatedContents);
 
                     if (originalMethods.Contains(definitionPart))
                         originalMethods.Remove(definitionPart);
