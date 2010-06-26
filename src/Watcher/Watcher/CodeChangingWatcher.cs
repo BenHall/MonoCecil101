@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace Watcher
 {
@@ -15,12 +17,16 @@ namespace Watcher
 
         static void fileChanged(object sender, FileSystemEventArgs e)
         {
+            string namespaceClassMethod = string.Empty;
 
             DisableEventsDuringExecution(() =>
                                              {
-                                                 string namespaceClassMethod = parser.GetChangedMethod(e);
-                                                 Console.WriteLine(namespaceClassMethod);
+                                                 IEnumerable<ChangedMethod> changedMethods = parser.GetChangedMethods(e);
+                                                 if (changedMethods.Any())
+                                                     namespaceClassMethod = changedMethods.First().ToString();
                                              });
+
+            Console.WriteLine(namespaceClassMethod);
         }
 
         private static void DisableEventsDuringExecution(Action action)

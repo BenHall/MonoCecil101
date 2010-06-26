@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Watcher
 {
@@ -11,43 +12,83 @@ namespace Watcher
 
         public FileContentsParser(string path)
         {
-            files = GetFileContents(path);
+            files = GetAllFiles(path, "*.cs");
         }
 
-        private static List<FileContents> GetFileContents(string path)
+        private List<FileContents> GetAllFiles(string path, string searchPattern)
         {
             List<FileContents> contents = new List<FileContents>();
-            foreach (var file in Directory.GetFiles(path, "*.cs", SearchOption.AllDirectories))
+            foreach (var file in Directory.GetFiles(path, searchPattern, SearchOption.AllDirectories))
             {
-                contents.Add(new FileContents { Path = file, Contents = File.ReadAllLines(file) });
+                contents.Add(new FileContents { Path = file, Contents = GetFileContents(file) });
             }
 
             return contents;
         }
 
-        public string GetChangedMethod(FileSystemEventArgs e)
+        public IEnumerable<ChangedMethod> GetChangedMethods(FileSystemEventArgs e)
         {
-            string[] updatedContents = File.ReadAllLines(e.FullPath);
-            FileContents originalContents = files.SingleOrDefault(x => x.Path == e.FullPath);
+            string[] updatedContents = GetUpdatedContents(e);
+            FileContents originalContents = GetOriginalContents(e);
 
+            IEnumerable<ChangedMethod> findChangedLines = FindChangedLines(updatedContents, originalContents);
+            originalContents.Contents = updatedContents;
+
+            return findChangedLines;
+        }
+
+        private IEnumerable<ChangedMethod> FindChangedLines(string[] updatedContents, FileContents originalContents)
+        {
+            List<ChangedMethod> list = new List<ChangedMethod>();
             for (int index = 0; index < updatedContents.Length; index++)
             {
                 var updatedContent = updatedContents[index];
                 var originalContent = originalContents.Contents[index];
-                if (updatedContent != originalContent)
-                {
-                    string methodName = FindName(updatedContents, index, IsLineMethodDefinition);
-                    string className = FindName(updatedContents, index, IsLineClassDefinition);
-                    string namespaceName = FindName(updatedContents, index, IsLineNamespaceDefinition);
 
-                    return String.Format("{0}.{1}.{2}", namespaceName, className, methodName);
-                }
+                if (updatedContent != originalContent)
+                    list.Add(GetNamespaceClassMethodOfChangedLine(index, updatedContents));
             }
 
-            return String.Empty;
+            return list;
         }
 
-        private string FindName(string[] updatedContents, int lineOfChange, Func<string, bool> lineMatcher)
+        private FileContents GetOriginalContents(FileSystemEventArgs e)
+        {
+            return files.SingleOrDefault(x => x.Path == e.FullPath);
+        }
+
+        private string[] GetUpdatedContents(FileSystemEventArgs e)
+        {
+            string[] updatedContents = GetFileContents(e.FullPath);
+            return updatedContents;
+        }
+
+        private string[] GetFileContents(string path)
+        {
+            try
+            {
+                StreamReader reader = new StreamReader(path);
+                string[] updatedContents = Regex.Split(reader.ReadToEnd(), "\r\n");
+                reader.Close();
+                return updatedContents;
+            }
+            catch (Exception)
+            {
+                return GetFileContents(path);
+            }
+        }
+
+        private ChangedMethod GetNamespaceClassMethodOfChangedLine(int index, string[] updatedContents)
+        {
+            ChangedMethod method = new ChangedMethod();
+            method.MethodName = FindPart(updatedContents, index, IsLineMethodDefinition);
+            method.ClassName = FindPart(updatedContents, index, IsLineClassDefinition);
+            method.NamespaceName = FindPart(updatedContents, index, IsLineNamespaceDefinition);
+
+            return method;
+        }
+
+        private string FindPart(string[] updatedContents, int lineOfChange, Func<string, bool> lineMatcher)
         {
             if (lineOfChange == 0)
                 return String.Empty;
@@ -62,7 +103,7 @@ namespace Watcher
                 }
             }
             
-            return FindName(updatedContents, lineOfChange - 1, lineMatcher);
+            return FindPart(updatedContents, lineOfChange - 1, lineMatcher);
         }
 
         private bool IsLineNamespaceDefinition(string currentLine)
@@ -79,5 +120,19 @@ namespace Watcher
         {
             return currentLine.StartsWith("public ") || currentLine.StartsWith("private ") || currentLine.StartsWith("protected ") || currentLine.StartsWith("internal ");
         }
+    }
+
+    internal class ChangedMethod
+    {
+        public override string ToString()
+        {
+            return String.Format("{0}.{1}.{2}", NamespaceName, ClassName, MethodName);
+        }
+
+        public string MethodName { get; set; }
+
+        public string ClassName { get; set; }
+
+        public string NamespaceName { get; set; }
     }
 }
