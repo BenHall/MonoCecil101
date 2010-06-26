@@ -52,7 +52,10 @@ namespace Watcher
                 {
                     var changedContents = GetNamespaceClassMethodOfChangedLine(index, updatedContents);
                     if (changedContents != null)
+                    {
+                        changedContents.Status = ChangedContentStatus.Updated;
                         list.Add(changedContents);
+                    }
                 }
             }
 
@@ -60,23 +63,24 @@ namespace Watcher
                 list.AddRange(FindNewMethods(updatedContents, originalContents.Contents.Length));
 
             if (originalContents.Contents.Length > updatedContents.Length)
-            {
-                Console.WriteLine("Removed:");
-                FindDeletedMethods(updatedContents, originalContents.Contents).ForEach(Console.WriteLine);
-            }
+                list.AddRange(FindDeletedMethods(updatedContents, originalContents));
 
             return list;
         }
 
-        private List<ChangedMethod> FindDeletedMethods(string[] updatedContents, string[] originalContents)
+        private List<ChangedMethod> FindDeletedMethods(string[] updatedContents, FileContents originalContents)
         {
             List<ChangedMethod> originalMethods = new List<ChangedMethod>();
-            for (int i = 0; i < originalContents.Length; i++)
+            for (int i = 0; i < originalContents.Contents.Length; i++)
             {
-                string originalLine = originalContents[i].Trim();
+                string originalLine = originalContents.Contents[i].Trim();
 
                 if (IsLineMethodDefinition(originalLine))
-                    originalMethods.Add(GetNamespaceClassMethodOfChangedLine(i, originalContents));
+                {
+                    ChangedMethod changedLine = GetNamespaceClassMethodOfChangedLine(i, originalContents.Contents);
+                    changedLine.Status = ChangedContentStatus.Delete;
+                    originalMethods.Add(changedLine);
+                }
             }
 
             for (int i = 0; i < updatedContents.Length; i++)
@@ -105,6 +109,7 @@ namespace Watcher
                 var changedContents = GetNamespaceClassMethodOfChangedLine(i, updatedContents);
                 if (changedContents != null)
                 {
+                    changedContents.Status = ChangedContentStatus.New;
                     list.Add(changedContents);
                 }
             }
@@ -193,20 +198,35 @@ namespace Watcher
 
     internal class ChangedMethod
     {
-        public override string ToString()
-        {
-            return String.Format("{0}.{1}.{2}", NamespaceName, ClassName, MethodName);
-        }
-
         public string MethodName { get; set; }
-
         public string ClassName { get; set; }
-
         public string NamespaceName { get; set; }
+        public ChangedContentStatus Status { get; set; }
 
         public bool FoundAllParts()
         {
             return !(string.IsNullOrEmpty(MethodName) || string.IsNullOrEmpty(ClassName) || string.IsNullOrEmpty(NamespaceName));
         }
+
+        public override string ToString()
+        {
+            return String.Format("{0}.{1}.{2}", NamespaceName, ClassName, MethodName);
+        }
+
+        public override int GetHashCode()
+        {
+            return ToString().GetHashCode();
+        }
+
+        public override bool Equals(object obj)
+        {
+            return ToString().Equals(obj.ToString());
+        }
+    }
+    internal enum ChangedContentStatus
+    {
+        New,
+        Delete,
+        Updated
     }
 }

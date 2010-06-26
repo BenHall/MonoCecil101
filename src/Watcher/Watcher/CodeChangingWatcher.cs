@@ -24,9 +24,9 @@ namespace Watcher
                                                  changedMethods = parser.GetChangedMethods(e);
                                              });
 
-            foreach (var changedMethod in changedMethods)
+            foreach (var changedMethod in changedMethods.Distinct())
             {
-                Console.WriteLine(changedMethod);
+                Console.WriteLine(changedMethod.Status + "\t" + changedMethod);
             }
         }
 
