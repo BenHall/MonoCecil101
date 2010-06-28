@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Watcher.MonoCecil;
 
 namespace Watcher
 {
@@ -24,9 +25,19 @@ namespace Watcher
                                                  changedMethods = parser.GetChangedMethods(e);
                                              });
 
+            Console.WriteLine("The following methods have changed:");
             foreach (var changedMethod in changedMethods.Distinct())
             {
-                Console.WriteLine(changedMethod.Status + "\t" + changedMethod);
+                Console.WriteLine("\t" + changedMethod.Status + "\t" + changedMethod);
+            }
+
+            UnitTestFinder finder = new UnitTestFinder();
+            IEnumerable<UnitTest> tests = finder.FindUnitTestsAffectedByChangedMethods(changedMethods);
+
+            Console.WriteLine("Unit tests required to be executed:");
+            foreach (var unitTest in tests)
+            {
+                Console.WriteLine("\t" + unitTest);
             }
         }
 
@@ -58,7 +69,7 @@ namespace Watcher
             watcher.Renamed += fileRenamed;
 
 
-            Console.WriteLine("Watching...");
+            Console.WriteLine("Started...");
             watcher.EnableRaisingEvents = true;
         }
     }

@@ -196,7 +196,7 @@ namespace Watcher
         }
     }
 
-    internal class ChangedMethod
+    public class ChangedMethod
     {
         public string MethodName { get; set; }
         public string ClassName { get; set; }
@@ -223,7 +223,8 @@ namespace Watcher
             return ToString().Equals(obj.ToString());
         }
     }
-    internal enum ChangedContentStatus
+
+    public enum ChangedContentStatus
     {
         New,
         Delete,
