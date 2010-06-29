@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Security.Policy;
+using NUnit.Framework;
 using Watcher.MonoCecil;
 
 namespace Watcher
@@ -20,8 +24,7 @@ namespace Watcher
         {
             IEnumerable<ChangedMethod> changedMethods = null;
             
-            DisableEventsDuringExecution(() =>
-                                             {
+            DisableEventsDuringExecution(() => {
                                                  changedMethods = parser.GetChangedMethods(e);
                                              });
 
@@ -38,6 +41,45 @@ namespace Watcher
             foreach (var unitTest in tests)
             {
                 Console.WriteLine("\t" + unitTest);
+            }
+
+            RebuildAssembly();
+            ExecuteUnitTests(tests);
+        }
+
+        private static void RebuildAssembly()
+        {
+            Console.WriteLine("Rebuilding...");
+            string sln = @"D:\SourceControl\MonoCecil101\example\UnitTesting1\UnitTesting1.sln";
+            string cmd = @"C:\Windows\Microsoft.NET\Framework\v3.5\MSBuild.exe";
+            ProcessStartInfo startInfo = new ProcessStartInfo(cmd, sln);
+            startInfo.CreateNoWindow = false;
+            var process = Process.Start(startInfo);
+            process.WaitForExit(1000);
+            Console.WriteLine("done rebuilding...");
+        }
+
+        private static void ExecuteUnitTests(IEnumerable<UnitTest> tests)
+        {
+            foreach (var unitTest in tests)
+            {
+                Console.ResetColor();
+                try
+                {
+                    var assembly = Assembly.LoadFrom(unitTest.AssemblyPath);
+                    var type = assembly.GetType(unitTest.GetTypeName());
+                    MethodInfo methodInfo = type.GetMethod(unitTest.MethodName);
+                    object o = Activator.CreateInstance(type);
+                    methodInfo.Invoke(o, null);
+                    Console.BackgroundColor = ConsoleColor.Green;
+                    Console.WriteLine("Done");
+                }
+                catch (Exception ex)
+                {
+                    Console.BackgroundColor = ConsoleColor.Red;
+                    Console.WriteLine("TEST FAILED!!");
+                    Console.WriteLine(ex.InnerException.Message);
+                }
             }
         }
 

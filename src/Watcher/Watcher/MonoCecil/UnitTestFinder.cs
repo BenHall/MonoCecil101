@@ -15,15 +15,17 @@ namespace Watcher.MonoCecil
             IEnumerable<InstructionCall> instructionCalls = Get();
             foreach (var changedMethod in changedMethods)
             {
-                var calls = instructionCalls.Where(x => x.Method == changedMethod.MethodName && x.Class == changedMethod.ClassName && x.Namespace == changedMethod.NamespaceName);
-                Console.WriteLine();
-                foreach (var usedInTest in calls.SelectMany(instructionCall => instructionCall.UsedInTests))
-                {
-                    foundUnitTests.Add(usedInTest);
-                }
+                var calls = instructionCalls.Where(MatchChangedMethod(changedMethod));
+
+                foundUnitTests.AddRange(calls.SelectMany(instructionCall => instructionCall.UsedInTests));
             }
 
             return foundUnitTests;
+        }
+
+        private Func<InstructionCall, bool> MatchChangedMethod(ChangedMethod changedMethod)
+        {
+            return x => x.Method == changedMethod.MethodName && x.Class == changedMethod.ClassName && x.Namespace == changedMethod.NamespaceName;
         }
 
         private IEnumerable<InstructionCall> Get()
@@ -35,7 +37,8 @@ namespace Watcher.MonoCecil
         {
             List<InstructionCall> instructionsExecuted = new List<InstructionCall>();
 
-            ModuleDefinition testAssembly = ModuleDefinition.ReadModule(@"D:\SourceControl\MonoCecil101\example\UnitTesting1\UnitTesting1.Tests\bin\Debug\UnitTesting1.Tests.dll");
+            var assembly = @"D:\SourceControl\MonoCecil101\example\UnitTesting1\UnitTesting1.Tests\bin\Debug\UnitTesting1.Tests.dll";
+            ModuleDefinition testAssembly = ModuleDefinition.ReadModule(assembly);
 
             foreach (var type in testAssembly.Types)
             {
@@ -51,6 +54,7 @@ namespace Watcher.MonoCecil
 
                         UnitTest test = new UnitTest
                                             {
+                                                AssemblyPath = assembly,
                                                 MethodName = method.Name,
                                                 ClassName = type.Name,
                                                 NamespaceName = type.Namespace
@@ -94,13 +98,19 @@ namespace Watcher.MonoCecil
 
     public class UnitTest
     {
-        public string MethodName { get; set; }
-        public string ClassName { get; set; }
+        public string AssemblyPath { get; set; }
         public string NamespaceName { get; set; }
+        public string ClassName { get; set; }
+        public string MethodName { get; set; }
 
         public override string ToString()
         {
-            return string.Format("{0}.{1}.{2}", NamespaceName, ClassName, MethodName);
+            return string.Format("{0}::{1}.{2}.{3}", AssemblyPath, NamespaceName, ClassName, MethodName);
+        }
+
+        public string GetTypeName()
+        {
+            return string.Format("{0}.{1}", NamespaceName, ClassName);
         }
     }
 
